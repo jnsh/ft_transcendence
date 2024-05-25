@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>❤️❤️❤️❤️❤️❤️</title>
+    <style>
+        body {
+            background: #333;
+            color: #ddd;
+        }
+
+        #main {
+            margin: 100px auto;
+            max-width: 1024px;
+        }
+
+        #pong {
+            padding: 4px;
+            width: 1024px;
+            height: 720px;
+            border: 2px solid #ddd;
+            background: #111;
+        }
+    </style>
+</head>
+<body>
+    <div id="main">
+        <h1>TRACNE ENERGY 2024</h1>
+        <canvas id="pong" width="1024" height="720"></canvas>
+    </div>
+</body>
+</html>
+
+<script>
+    const canvas = document.getElementById("pong");
+    const ctx = canvas.getContext("2d");
+
+    const padleThic = 10;
+    const padleLen = 160;
+    const padleSpeed = 4;
+    var leftPadleY = (canvas.height - padleLen) / 2;
+    var rightPadleY = (canvas.height - padleLen) / 2;
+    
+    const ballSize = 20;
+    var ballX = 0 + padleThic;
+    var ballY = canvas.height / 2;
+    const ballSpeed = 5;
+    var ballSpeedX = ballSpeed;
+    var ballSpeedY = 0;
+    var ballDirectionX = 1;
+    var ballDirectionY = 1;
+
+    var pressedKeys = [];
+    window.addEventListener('keydown', this.keyPressEvent, false);
+    window.addEventListener('keyup', this.keyReleaseEvent, false);
+
+    function keyPressEvent(event) {
+        pressedKeys[event.keyCode] = true;
+    }
+
+    function keyReleaseEvent(event) {
+        pressedKeys[event.keyCode] = false;
+    }
+
+    function drawBall() {
+        ctx.fillStyle = "#ddd";
+        ctx.fillRect(ballX, ballY, ballSize, ballSize);
+    }
+
+    function drawLeftPadle() {
+        ctx.fillStyle = "#ddd";
+        ctx.fillRect(0, leftPadleY, padleThic, padleLen);
+    }
+
+    function drawRightPadle() {
+        ctx.fillStyle = "#ddd";
+        ctx.fillRect(canvas.width - padleThic, rightPadleY, padleThic, padleLen);
+    }
+
+    function updateBallPosition() {
+        if ((ballX <= 0 + padleThic && ballDirectionX == -1) && (ballY > leftPadleY && ballY < leftPadleY + padleLen)
+            || (ballX >= canvas.width - padleThic - ballSize && ballDirectionX == 1) && (ballY > rightPadleY && ballY < rightPadleY + padleLen)) {
+            ballDirectionY = Math.random() < 0.5 ? -1 : 1;
+            ballDirectionX *= -1;
+            ballSpeedY = Math.floor(Math.random() * ballSpeed);
+            ballSpeedX = Math.sqrt((ballSpeed ** 2) - (ballSpeedY ** 2));
+        }
+
+        if (ballY <= 0 || ballY >= canvas.height - ballSize)
+            ballDirectionY *= -1;
+
+        ballX += ballSpeedX * ballDirectionX;
+        ballY += ballSpeedY * ballDirectionY;
+    }
+
+    function updatePaddlePosition() {
+        // W
+        if (pressedKeys[87] && leftPadleY > 0)
+            leftPadleY -= padleSpeed;
+        // S
+        if (pressedKeys[83] && leftPadleY < canvas.height - padleLen)
+            leftPadleY += padleSpeed;
+        // up
+        if (pressedKeys[38] && rightPadleY > 0)
+            rightPadleY -= padleSpeed;
+        // down
+        if (pressedKeys[40] && rightPadleY < canvas.height - padleLen)
+            rightPadleY += padleSpeed;
+    }
+
+    function draw() {
+        this.updatePaddlePosition();
+        this.updateBallPosition();
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        this.drawLeftPadle();
+        this.drawRightPadle();
+        this.drawBall();
+    }
+
+    const interval = setInterval(this.draw, 10);
+
+</script>
