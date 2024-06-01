@@ -44,6 +44,10 @@
 	const ballSize = 10;
 	var ballX = 0 + padleThic;
 	var ballY = canvas.height / 2;
+
+	var AIballX = ballX;
+	var AIballY = ballY;
+
 	const ballSpeed = 5;
 	var ballSpeedX = ballSpeed;
 	var ballSpeedY = 0;
@@ -177,7 +181,7 @@
 			console.log("index: " + index);
 			var level = levels[index];
 
-			var predictedBallY = ballY + ballSpeedY * ballDirectionY;
+			var predictedBallY = AIballY + ballSpeedY * ballDirectionY;
 			var random = getRandomNumber(-(level.aiError / 2), level.aiError / 2);
 			var string = "Predicted ball Y: " + predictedBallY + " Random: " + random;
 			predictedBallY += random;
@@ -208,6 +212,12 @@
 		// }
 	}
 
+	function updateAiBallPos()
+	{
+		AIballX = ballX;
+		AIballY = ballY;
+	}
+
 	function draw() {
 		this.updatePaddlePosition();
 		// this.updatePaddlePosition();
@@ -222,6 +232,7 @@
 		this.drawBall();
 	}
 
-	const interval = setInterval(this.draw, 10);
+	const interval1 = setInterval(this.draw, 10);
+	const interval2 = setInterval(this.updateAiBallPos, 1000);
 
 </script>
