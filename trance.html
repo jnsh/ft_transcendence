@@ -37,7 +37,7 @@
 
 	const padleThic = 10;
 	const padleLen = 100;
-	const padleSpeed = 4;
+	const padleSpeed = 6;
 	var leftPadleY = (canvas.height - padleLen) / 2;
 	var rightPadleY = (canvas.height - padleLen) / 2;
 
@@ -45,10 +45,7 @@
 	var ballX = 0 + padleThic;
 	var ballY = canvas.height / 2;
 
-	var AIballX = ballX;
-	var AIballY = ballY;
-
-	const ballSpeed = 5;
+	const ballSpeed = 10;
 	var ballSpeedX = ballSpeed;
 	var ballSpeedY = 0;
 	var ballDirectionX = 1;
@@ -56,37 +53,13 @@
 
 	var ballDirection = 0;
 
-	let outputColor = "color:green; font-size:20px;" //delete
+	var scores = [0, 0];
 
-	var	scores = [0, 0];
-
-	const levels = [
-	{aiError:  10}, // 0:  ai is losing by 10
-	{aiError:  20}, // 1:  ai is losing by 9
-	{aiError:  30}, // 2:  ai is losing by 8
-	{aiError:  40}, // 3:  ai is losing by 7
-	{aiError:  50}, // 4:  ai is losing by 6
-	{aiError:  60}, // 5:  ai is losing by 5
-	{aiError:  70}, // 6:  ai is losing by 4
-	{aiError:  80}, // 7:  ai is losing by 3
-	{aiError: 90}, // 8:  ai is losing by 2
-	{aiError: 100}, // 9:  ai is losing by 1
-	{aiError: 110}, // 10:  tie
-	{aiError: 120}, // 11:  ai is winning by 1
-	{aiError: 130}, // 12: ai is winning by 2
-	{aiError: 140}, // 13: ai is winning by 3
-	{aiError: 150}, // 14: ai is winning by 4
-	{aiError: 160}, // 15: ai is winning by 5
-	{aiError: 170}, // 16: ai is winning by 6
-	{aiError: 180}, // 17: ai is winning by 7
-	{aiError: 190},  // 18: ai is winning by 8
-	{aiError: 200},  // 19: ai is winning by 9
-	{aiError: 210}  // 20: ai is winning by 10
-];
+	var targetY = 0;
 
 	var pressedKeys = [];
-	window.addEventListener('keydown', this.keyPressEvent, false);
-	window.addEventListener('keyup', this.keyReleaseEvent, false);
+	window.addEventListener('keydown', keyPressEvent, false);
+	window.addEventListener('keyup', keyReleaseEvent, false);
 
 	function keyPressEvent(event) {
 		pressedKeys[event.keyCode] = true;
@@ -128,24 +101,19 @@
 		else if (ballX >= canvas.width) {
 			scores[0]++;
 			ballX = 0 + ballSize;
+			console.log("HIT: ", ballY, rightPadleY); //delete
 			ballY = canvas.height / 2;
 			ballDirection = 0;
-			console.log("%c LOST", "color:green;");
-			return ;
-
 		}
 
-		if ((ballX <= padleThic && ballDirectionX == -1) && (ballY + ballSize > leftPadleY && ballY < leftPadleY + padleLen)
-			|| (ballX >= canvas.width - padleThic - ballSize && ballDirectionX == 1) && (ballY + ballSize > rightPadleY && ballY < rightPadleY + padleLen)) {
+		if ((ballX <= padleThic && ballDirectionX == -1 && ballY + ballSize > leftPadleY && ballY < leftPadleY + padleLen) ||
+			(ballX >= canvas.width - padleThic - ballSize && ballDirectionX == 1 && ballY + ballSize > rightPadleY && ballY < rightPadleY + padleLen)) {
 			ballDirectionY = Math.random() < 0.5 ? -1 : 1;
 			ballDirectionX *= -1;
 			ballSpeedY = Math.floor(Math.random() * ballSpeed);
 			ballSpeedX = Math.sqrt((ballSpeed ** 2) - (ballSpeedY ** 2));
 
-			if (ballDirection == 0)
-				ballDirection = 1;
-			else
-				ballDirection = 0;
+			ballDirection = ballDirection == 0 ? 1 : 0;
 		}
 
 		if (ballY <= 0 || ballY >= canvas.height - ballSize)
@@ -155,84 +123,90 @@
 		ballY += ballSpeedY * ballDirectionY;
 	}
 
-	function updatePaddlePosition() {
+	function updatePadlePosition() {
 		// W
 		if (pressedKeys[87] && leftPadleY > 0)
 			leftPadleY -= padleSpeed;
 		// S
 		if (pressedKeys[83] && leftPadleY < canvas.height - padleLen)
 			leftPadleY += padleSpeed;
-		// W
-		if (pressedKeys[38] && rightPadleY > 0)
+		// Up Arrow
+		if (pressedKeys[38] && rightPadleY > 0 && targetY < rightPadleY)
 			rightPadleY -= padleSpeed;
-		// S
-		if (pressedKeys[40] && rightPadleY < canvas.height - padleLen)
+		// Down Arrow
+		if (pressedKeys[40] && rightPadleY < canvas.height - padleLen && targetY > rightPadleY + padleLen / 2)
 			rightPadleY += padleSpeed;
 	}
 
-	function getRandomNumber(min, max) {
-		return (Math.floor(Math.random() * (max - min + 1)) + min);
-	}
+	// function getRandomNumber(min, max) {
+	// 	return Math.floor(Math.random() * (max - min + 1)) + min;
+	// }
 
-	function updateAIPaddlePosition(padle) {
-		if (ballDirection == 0) {
-			var scoreDiff = scores[1] - scores[0];
-			var index = Math.max(0, Math.min(levels.length - 1, scoreDiff + 8));
-			console.log("index: " + index);
-			var level = levels[index];
+	function predictBallY() {
+		var tempBallX = ballX;
+		var tempBallY = ballY;
+		var tempBallSpeedX = ballSpeedX;
+		var tempBallSpeedY = ballSpeedY;
+		var tempBallDirectionX = ballDirectionX;
+		var tempBallDirectionY = ballDirectionY;
 
-			var predictedBallY = AIballY + ballSpeedY * ballDirectionY;
-			var random = getRandomNumber(-(level.aiError / 2), level.aiError / 2);
-			var string = "Predicted ball Y: " + predictedBallY + " Random: " + random;
-			predictedBallY += random;
-			string += " Predicted ball Y: " + predictedBallY;
-			// console.log(string);
+		while (tempBallX < canvas.width - padleThic) {
+			tempBallX += tempBallSpeedX * tempBallDirectionX;
+			tempBallY += tempBallSpeedY * tempBallDirectionY;
 
-			if (predictedBallY < rightPadleY + padleLen / 2 && rightPadleY > 0) {
-				rightPadleY -= padleSpeed;
-			}
-			else if (predictedBallY > rightPadleY + padleLen / 2 && rightPadleY < canvas.height - padleLen) {
-				rightPadleY += padleSpeed;
+			if (tempBallY <= 0 || tempBallY >= canvas.height - ballSize) {
+				tempBallDirectionY *= -1;
+				tempBallY += tempBallSpeedY * tempBallDirectionY;
 			}
 		}
-		// else if (ballDirection == 1) {
-		// 	var scoreDiff = scores[0] - scores[1];
-		// 	var index = Math.max(0, Math.min(levels.length - 1, scoreDiff + 8));
-		// 	var level = levels[index];
-
-		// 	var predictedBallY = ballY + ballSpeedY * ballDirectionY;
-		// 	predictedBallY += getRandomNumber(-(level.aiError / 2), level.aiError / 2);
-
-		// 	if (predictedBallY < leftPadleY + padleLen / 2  && leftPadleY > 0) {
-		// 		leftPadleY -= padleSpeed;
-		// 	}
-		// 	else if (predictedBallY > leftPadleY + padleLen / 2 && leftPadleY < canvas.height - padleLen) {
-		// 		leftPadleY += padleSpeed;
-		// 	}
-		// }
+		return tempBallY;
 	}
 
-	function updateAiBallPos()
-	{
-		AIballX = ballX;
-		AIballY = ballY;
+	function updateAIPadle() {
+		if (ballDirection == 0) {
+			targetY = predictBallY();
+			console.log("PREDICT", targetY); //delete
+
+			// make errros ...
+
+			pressedKeys[38] = false;
+			pressedKeys[40] = false;
+			if (targetY < rightPadleY + padleLen / 2 - 25) {
+				pressedKeys[38] = true;
+				pressedKeys[40] = false;
+			}
+			else if (targetY > rightPadleY + padleLen / 2 + 25) {
+				pressedKeys[38] = false;
+				pressedKeys[40] = true;
+			}
+			else {
+				pressedKeys[38] = false;
+				pressedKeys[40] = false;
+			}
+			console.log("padle y: ", rightPadleY); //delete
+		}
+		if (ballDirection == 1) {
+				//maybe shouuld move to the center!!!
+				pressedKeys[38] = false;
+				pressedKeys[40] = false;
+		}
 	}
 
 	function draw() {
-		this.updatePaddlePosition();
-		// this.updatePaddlePosition();
-		// this.updateLEFTPaddlePosition();
-		this.updateAIPaddlePosition();
-		this.updateBallPosition();
+		updatePadlePosition();
+		updateBallPosition();
 
 		ctx.clearRect(0, 0, canvas.width, canvas.height);
-		this.drawScore();
-		this.drawLeftPadle();
-		this.drawRightPadle();
-		this.drawBall();
+		drawScore();
+		drawLeftPadle();
+		drawRightPadle();
+		drawBall();
+
+		requestAnimationFrame(draw);
 	}
 
-	const interval1 = setInterval(this.draw, 10);
-	const interval2 = setInterval(this.updateAiBallPos, 1000);
+	setInterval(updateAIPadle, 1000);
+
+	draw();
 
 </script>
