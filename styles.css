@@ -1,0 +1,17 @@
+body {
+	background: #333;
+	color: #ddd;
+}
+
+#main {
+	margin: 100px auto;
+	max-width: 1024px;
+}
+
+#pong {
+	padding: 4px;
+	width: 1024px;
+	height: 720px;
+	border: 2px solid #ddd;
+	background: #111;
+}
