@@ -30,7 +30,6 @@ def makesoc(request):
 
 #Functioning endpoints
 
-@csrf_exempt
 def purgeallusers(request):
 	if (request.method == 'DELETE'):
 		try:
@@ -41,44 +40,6 @@ def purgeallusers(request):
 	else:
 		return HttpResponse('Method not allowed', status=405)
 
-@csrf_exempt
-def deleteuser(request):
-	if (request.method == 'DELETE'):
-		try:
-			data = json.loads(request.body)
-			deleteUsername = data.get('username')
-			user = User.objects.get(username=deleteUsername)
-			user.delete()
-			return HttpResponse('User deleted', status=200)
-		except:
-			return HttpResponse('User not found', status=404)
-	else:
-		return HttpResponse('Method not allowed', status=405)
-
-@csrf_exempt
-def createuser(request):
-	if (request.method == 'POST'):
-		try:
-			data = json.loads(request.body)
-			if (data.get('avatar') == None):
-				avatar = 'api/static/avatars/default.png'
-			else:
-				avatar = data.get('avatar')
-			user = User(
-				username= data.get('username'),
-				email= data.get('email'),
-				password= data.get('password'),
-				avatar= avatar
-			)
-			user.save()
-			return HttpResponse('User created', status=201)
-		except Exception as e:
-			print(e)
-			return HttpResponse('User creation failed', status=500)
-	else:
-		return HttpResponse('Method not allowed', status=405)
-
-@csrf_exempt
 def login(request):
 	if (request.method == 'POST'):
 		try:
@@ -93,7 +54,6 @@ def login(request):
 	else:
 		return HttpResponse('Method not allowed', status=405)
 
-@csrf_exempt
 def avatar(request):
 	if (request.method == 'GET'):
 		try:
@@ -118,8 +78,7 @@ def avatar(request):
 	else:
 		return HttpResponse('Method not allowed', status=405)
 
-@csrf_exempt
-def friend(request): #delete friend
+def friend(request):
 	if (request.method == 'POST'):
 		try:
 			data = json.loads(request.body)
@@ -147,8 +106,7 @@ def friend(request): #delete friend
 	else:
 		return HttpResponse('Method not allowed', status=405)
 
-@csrf_exempt
-def getuser(request):
+def user(request):
 	if (request.method == 'GET'):
 		try:
 			getUsername = request.GET.get('username')
@@ -167,5 +125,48 @@ def getuser(request):
 		except Exception as e:
 			print(e)
 			return HttpResponse('User not found', status=404)
+	if (request.method == 'POST'):
+		try:
+			data = json.loads(request.body)
+			if (data.get('avatar') == None):
+				avatar = 'api/static/avatars/default.png'
+			else:
+				avatar = data.get('avatar')
+			user = User(
+				username= data.get('username'),
+				email= data.get('email'),
+				password= data.get('password'),
+				avatar= avatar
+			)
+			user.save()
+			return HttpResponse('User created', status=201)
+		except Exception as e:
+			print(e)
+			return HttpResponse('User creation failed', status=500)
+	if (request.method == 'DELETE'):
+		try:
+			data = json.loads(request.body)
+			deleteUsername = data.get('username')
+			user = User.objects.get(username=deleteUsername)
+			user.delete()
+			return HttpResponse('User deleted', status=200)
+		except:
+			return HttpResponse('User not found', status=404)
+	if (request.method == 'PUT'):
+		try: #something like this Dardan. Good luck!
+			data = json.loads(request.body)
+			toChangeUsername = data.get('username')
+			user = User.objects.get(username=toChangeUsername)
+			if (data.get('email') != None):
+				user.email = data.get('email')
+			if (data.get('password') != None):
+				user.password = data.get('password')
+			if (data.get('avatar') != None):
+				user.avatar = data.get('avatar')
+			user.save()
+			return HttpResponse('User updated', status=200)
+		except Exception as e:
+			print(e)
+			return HttpResponse('User not updated', status=500)
 	else:
 		return HttpResponse('Method not allowed', status=405)
