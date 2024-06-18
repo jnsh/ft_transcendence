@@ -31,6 +31,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 
 # Application definition
 
@@ -41,7 +42,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-	'django_extensions',
 	'api',
 	'flow',
 ]
@@ -54,6 +54,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.auth.middleware.RemoteUserMiddleware",
 ]
 
 ROOT_URLCONF = 'flow.urls'
