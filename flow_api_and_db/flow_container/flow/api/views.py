@@ -1,6 +1,7 @@
 from django.http import HttpResponse
 from django.shortcuts import redirect
 from .models import Account
+from .models import Message
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
 from django.contrib.auth import login
@@ -11,19 +12,17 @@ import requests
 import json
 
 #non functioning/test endpoints
-def henriika(request):
-	return HttpResponse('Hello, Henriika!')
 
-def makesoc(request):
-	if (request.method == 'GET'):
-		matchmakingUrl = 'http://matcher:8001/matchmaking'
-		matchmakerResponse = requests.post(matchmakingUrl + '/getready', data=request)
-		if (matchmakerResponse.status_code == 200):
-			return redirect(matchmakingUrl + '/connect')
-		else:
-			return HttpResponse('Matchmaker is not available', status=503)
-	else:
-		return HttpResponse('Method not allowed', status=405)
+# def mathcmaking(request):
+# 	if (request.method == 'GET'):
+# 		matchmakingUrl = 'http://matcher:8001/initiatematchmaking'
+# 		matchmakerResponse = requests.post(matchmakingUrl , data=request)
+# 		if (matchmakerResponse.status_code == 200):
+# 			return redirect(matchmakingUrl + '/connect')
+# 		else:
+# 			return HttpResponse('Matchmaker is not available', status=503)
+# 	else:
+# 		return HttpResponse('Method not allowed', status=405)
 	
 
 
@@ -51,6 +50,27 @@ def purgeallusers_view(request):
 		return HttpResponse('Unauthorized', status=401)
 
 
+#### MESSAGE ENDPOINTS #####
+
+def message_view(request):
+	if (request.method == 'POST'): ##send message
+		try:
+			data = json.loads(request.body)
+			senderUsername = data.get('sender')
+			receiverUsername = data.get('receiver')
+			messageContent = data.get('content')
+			sender = Account.objects.get(user__username=senderUsername)
+			receiver = Account.objects.get(user__username=receiverUsername)
+			newMessage = Message(
+				messageContent = messageContent,
+				messageSender = sender,
+				messageReceiver = receiver,
+			)
+			newMessage.save()
+			return HttpResponse('Message sent', status=200)
+		except Exception as e:
+			return HttpResponse(e, status=500)
+
 
 ##### LOGIN AND LOGOUT ENDPOINTS #####
 
@@ -77,10 +97,15 @@ def login_view(request):
 
 def logout_view(request):
 	try:
+		# set the pingUrl to empty string
+		toLogout = Account.objects.get(user__username=request.session['username'])
+		toLogout.pingUrl = ''
+		toLogout.save()
 		logout(request)
 		Session.objects.filter(session_key=request.session.session_key).delete()
 		return HttpResponse('Logout successful', status=200)
-	except: 
+	except Exception as e:
+		print(e)
 		return HttpResponse('Logout failed', status=500)
 
 
@@ -110,6 +135,85 @@ def avatar_view(request):
 			return HttpResponse('Method not allowed', status=405)
 	else:
 		return HttpResponse('Unauthorized', status=401)
+
+
+##### MESSAGES ENDPOINTS #####
+
+def send_messages_view(request):
+	if (request.method == 'POST'):
+		try:
+			data = json.loads(request.body)
+			senderUsername = data.get('sender')
+			receiverUsername = data.get('receiver')
+			messageContent = data.get('content')
+			sender = Account.objects.get(user__username=senderUsername)
+			receiver = Account.objects.get(user__username=receiverUsername)
+			newMessage = Message(
+				messageContent = messageContent,
+				messageSender = sender,
+				messageReceiver = receiver,
+			)
+			newMessage.save()
+			sender.sentMessages.add(newMessage)
+			receiver.receivedMessages.add(newMessage)
+			sender.save()
+			receiver.save()
+			# send a ping to the receiver
+			receiverPingUrl = receiver.pingUrl
+			if (receiverPingUrl == ''):
+				return HttpResponse('Message sent, but ping failed', status=200)
+			pingData = {
+				'sender': senderUsername,
+				'receiver': receiverUsername,
+				'content': messageContent,
+			}
+			pingResponse = requests.post(receiverPingUrl, data=pingData)
+			if (pingResponse.status_code != 200):
+				return HttpResponse('Message sent, but ping failed', status=200)
+			return HttpResponse('Message sent', status=200)
+		except Exception as e:
+			return HttpResponse(e, status=500)
+	if (request.method == 'GET'): ## gets all messages user has sent to a receiver defined in query. Unless the receiver query is all, then it gets all messages sent by the user
+		try:
+			username = request.GET.get('username')
+			user = Account.objects.get(user__username=username)
+			currentReceiver = request.GET.get('receiver')
+			if (currentReceiver == 'all'):
+				allSentMessages = user.sentMessages.all()
+			else:
+				allSentMessages = user.sentMessages.filter(messageReceiver__user__username=currentReceiver)
+			allSentMessagesContent = []
+			for message in allSentMessages:
+				messageData = {
+					'sender': message.messageSender.user.username,
+					'receiver': message.messageReceiver.user.username,
+					'content': message.messageContent,
+				}
+				allSentMessagesContent.append(messageData)
+			return HttpResponse(json.dumps(allSentMessagesContent), status=200)
+		except Exception as e:
+			return HttpResponse(e, status=404)
+
+
+def received_messages_view(request): ### gets all messages received by user from another user "sender" defined in query. If sender query is all, then it gets all messages received by the user
+	if (request.method == 'GET'):
+		try:
+			usersUsername = request.GET.get('username')
+			currentSenderUsername = request.GET.get('sender')
+			user = Account.objects.get(user__username=usersUsername)
+			allMessages = user.receivedMessages.filter(messageSender__user__username=currentSenderUsername)
+			allMessagesContent = []
+			for message in allMessages:
+				messageData = {
+					'sender': message.messageSender.user.username,
+					'receiver': message.messageReceiver.user.username,
+					'content': message.messageContent,
+				}
+				allMessagesContent.append(messageData)
+			return HttpResponse(json.dumps(allMessagesContent), status=200)
+		except Exception as e:
+			return HttpResponse(e, status=404)
+
 
 
 
@@ -159,7 +263,8 @@ def user_view(request):
 			newUser.save()
 			newAccount = Account(
 				user= newUser,
-				avatar= avatar
+				avatar= avatar,
+				pingUrl= '',
 			)
 			newAccount.save()
 			return HttpResponse('User created', status=201)
@@ -192,10 +297,11 @@ def user_view(request):
 			try:
 				data = json.loads(request.body)
 				deleteUsername = data.get('username')
-				user = User.objects.get(user__username=deleteUsername)
+				user = Account.objects.get(user__username=deleteUsername)
 				user.delete()
 				return HttpResponse('User deleted', status=200)
-			except:
+			except Exception as e:
+				print(e)
 				return HttpResponse('User not found', status=404)
 		if (request.method == 'PUT'): ##change user password
 			try:
